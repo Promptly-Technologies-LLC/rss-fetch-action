@@ -57,5 +57,4 @@ jobs:
 
       - name: Validate Output is JSON
         id: validate-json
-        run: |
-          echo "${{ steps.test-action.outputs.feed }}" | jq empty
+        run: printf '%s' "${{ steps.test-action.outputs.feed }}" | jq empty
