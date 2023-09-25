@@ -1,16 +1,16 @@
 {
-  "name": "javascript-action",
-  "description": "GitHub Actions JavaScript Template",
-  "version": "0.0.0",
-  "author": "",
+  "name": "rss-fetch-action",
+  "description": "Javascript GitHub Action to fetch an RSS feed",
+  "version": "0.0.1",
+  "author": "Christopher C. Smith <christopher.smith@promptlytechnologies.com",
   "private": true,
-  "homepage": "https://github.com/actions/javascript-action#readme",
+  "homepage": "https://github.com/Promptly-Technologies-LLC/rss-fetch-action#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/javascript-action.git"
+    "url": "git+https://github.com/Promptly-Technologies-LLC/rss-fetch-action.git"
   },
   "bugs": {
-    "url": "https://github.com/actions/javascript-action/issues"
+    "url": "https://github.com/Promptly-Technologies-LLC/rss-fetch-action/issues"
   },
   "keywords": [
     "GitHub",
@@ -63,7 +63,9 @@
     ]
   },
   "dependencies": {
-    "@actions/core": "^1.10.1"
+    "@actions/core": "^1.10.1",
+    "isomorphic-fetch": "^3.0.0",
+    "xml2js": "^0.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",

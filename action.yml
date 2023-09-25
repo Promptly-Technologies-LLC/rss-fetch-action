@@ -1,18 +1,18 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'RSS Feed Fetch Action'
+description: 'Fetches an RSS feed and optionally saves it to a file'
+author: 'Christopher C. Smith <christopher.smith@promptlytechnologies.com>'
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  feed_url:
+    description: 'The URL of the RSS feed to fetch'
     required: true
-    default: '1000'
+  file_path:
+    description: 'The relative file path to save the fetched RSS feed'
+    required: false
 
-# Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  feed:
+    description: 'The fetched RSS feed in JSON format'
 
 runs:
   using: node20
