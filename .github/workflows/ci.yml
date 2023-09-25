@@ -55,10 +55,6 @@ jobs:
         with:
           feed_url: "https://knowledgeworkersguide.substack.com/feed"
 
-      - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.feed }}"
-
       - name: Validate Output is JSON
         id: validate-json
         run: |
