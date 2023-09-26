@@ -55,10 +55,10 @@ jobs:
         with:
           feed_url: "https://knowledgeworkersguide.substack.com/feed"
 
-      - name: Write Output to File
-        run: echo "${{ steps.test-action.outputs.feed }}" > feed_output.json
-    
-      - name: Validate Output is JSON
-        id: validate-json
-        run: jq empty feed_output.json
-        
+      - name: Validate JSON structure
+        run: |
+          const obj = JSON.parse("${{ steps.test-action.outputs.feed }}");
+          if (!obj || !obj.rss || !obj.rss.$) {
+            console.error('Invalid object');
+            process.exit(1);
+          }
