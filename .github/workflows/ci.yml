@@ -53,8 +53,10 @@ jobs:
         id: test-action
         uses: ./
         with:
-          feed_url: "https://knowledgeworkersguide.substack.com/feed"
+          feed_url: "https://modelingmarkets.substack.com/feed"
 
-      - name: Validate JSON structure
+      - name: Escape and Validate JSON structure
         run: |
-          echo 'const obj = JSON.parse(`'"${{ steps.test-action.outputs.feed }}"'`); if (!obj || !obj.rss || !obj.rss.$) { console.error("Invalid object"); process.exit(1); }' | node -e        
+          escaped_json=$(echo "${{ steps.test-action.outputs.feed }}" | jq -c -r @uri)
+          echo "const obj = JSON.parse(decodeURI('$escaped_json')); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }" | node -e
+  
