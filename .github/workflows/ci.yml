@@ -55,9 +55,10 @@ jobs:
         with:
           feed_url: "https://knowledgeworkersguide.substack.com/feed"
 
-      - name: Set Output as Env Var
-        run: echo "FEED_OUTPUT=${{ steps.test-action.outputs.feed }}" >> $GITHUB_ENV
+      - name: Write Output to File
+        run: echo "${{ steps.test-action.outputs.feed }}" > feed_output.json
     
       - name: Validate Output is JSON
         id: validate-json
-        run: echo "$FEED_OUTPUT" | jq empty
+        run: jq empty feed_output.json
+        
