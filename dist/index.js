@@ -13295,7 +13295,6 @@ module.exports.implForWrapper = function (wrapper) {
 /***/ 4351:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-// index.js
 const fetch = __nccwpck_require__(2340)
 const fs = __nccwpck_require__(7147)
 const path = __nccwpck_require__(1017)
@@ -13306,39 +13305,76 @@ async function fetchRssFeed() {
   try {
     const feedUrl = process.env.INPUT_FEED_URL
     const filePath = process.env.INPUT_FILE_PATH
+    const removeLastBuildDate =
+      process.env.INPUT_REMOVE_LAST_BUILD_DATE === 'true'
 
     if (!feedUrl) {
       throw new Error('Feed URL is not provided')
     }
 
-    const response = await fetch(feedUrl)
+    if (!filePath) {
+      throw new Error('File path is not provided')
+    } else if (
+      !['.json', '.xml'].includes(path.extname(filePath).toLowerCase())
+    ) {
+      throw new Error('File extension must be .json or .xml')
+    }
+
+    let response
+    try {
+      response = await fetch(feedUrl)
+    } catch (err) {
+      throw new Error(
+        'Failed to fetch RSS feed due to network error or invalid URL'
+      )
+    }
+
     if (!response.ok) {
       throw new Error(
         `Failed to fetch RSS feed (${response.status} ${response.statusText})`
       )
     }
 
-    const feedData = await response.text()
-    const parsedData = await parseStringPromise(feedData, {
-      explicitArray: false
-    })
-    const jsonFeedData = JSON.stringify(parsedData, null, 2)
+    let feedData = await response.text()
 
-    if (filePath) {
-      const ext = path.extname(filePath)
-      if (ext && ext !== '.json') {
-        throw new Error('File extension must be .json')
-      }
-      const finalFilePath = ext ? filePath : `${filePath}.json`
-      const dir = path.dirname(finalFilePath)
-      fs.accessSync(dir, fs.constants.W_OK)
-      fs.writeFileSync(finalFilePath, jsonFeedData)
-      console.log(`RSS feed saved to ${finalFilePath} successfully!`)
-    } else {
-      console.log('No file path provided; RSS feed not saved to file.')
+    // Optionally remove the lastBuildDate tag from XML
+    if (removeLastBuildDate) {
+      feedData = feedData.replace(/<lastBuildDate>.*?<\/lastBuildDate>/g, '')
     }
 
-    core.setOutput('feed', jsonFeedData)
+    // Parse the modified XML to JSON
+    let parsedData
+    try {
+      parsedData = await parseStringPromise(feedData, { explicitArray: false })
+    } catch (err) {
+      throw new Error(
+        'Failed to parse RSS feed. The feed might not be valid XML.'
+      )
+    }
+
+    const ext = path.extname(filePath).toLowerCase()
+    const finalFilePath = filePath
+    const dir = path.dirname(finalFilePath)
+
+    try {
+      // Check if directory exists, if not create it
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
+
+      if (ext === '.json') {
+        const jsonFeedData = JSON.stringify(parsedData, null, 2)
+        fs.writeFileSync(finalFilePath, jsonFeedData)
+      } else if (ext === '.xml') {
+        fs.writeFileSync(finalFilePath, feedData)
+      }
+
+      console.log(`RSS feed saved to ${finalFilePath} successfully!`)
+    } catch (err) {
+      throw new Error(
+        `Failed to write the file due to permissions or other file system error: ${err.message}`
+      )
+    }
   } catch (error) {
     console.error('Error fetching RSS feed:', error)
     core.setFailed(error.message)

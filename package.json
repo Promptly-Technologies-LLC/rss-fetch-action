@@ -24,7 +24,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "bundle": "npm run format:write && npm run package",
+    "bundle": "npm install && npm run format:write && npm run package",
     "ci-test": "jest",
     "format:write": "prettier --write **/*.js",
     "format:check": "prettier --check **/*.js",
@@ -32,7 +32,7 @@
     "package": "ncc build src/index.js --license licenses.txt",
     "package:watch": "npm run package -- --watch",
     "test": "(jest && make-coverage-badge --output-path ./badges/coverage.svg) || make-coverage-badge --output-path ./badges/coverage.svg",
-    "all": "npm run format:write && npm run lint && npm run test && npm run package"
+    "all": "npm install && npm run format:write && npm run lint && npm run test && npm run package"
   },
   "license": "MIT",
   "eslintConfig": {

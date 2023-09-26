@@ -14,30 +14,24 @@ jobs:
 
     steps:
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        id: setup-node
         uses: actions/setup-node@v3
         with:
           node-version: 20
           cache: npm
 
       - name: Install Dependencies
-        id: npm-ci
         run: npm ci
 
       - name: Check Format
-        id: npm-format-check
         run: npm run format:check
 
       - name: Lint
-        id: npm-lint
         run: npm run lint
 
       - name: Test
-        id: npm-ci-test
         run: npm run ci-test
 
   test-action:
@@ -46,18 +40,22 @@ jobs:
 
     steps:
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v4
 
-      - name: Test Local Action
-        id: test-action
+      - name: Test Local Action with JSON
         uses: ./
         with:
           feed_url: "https://modelingmarkets.substack.com/feed"
+          file_path: "temp.json"
 
-      - name: Save and Validate JSON structure
-        run: |
-          cat <<EOL > temp.json
-          ${{ steps.test-action.outputs.feed }}
-          EOL
-          node -e "const fs = require('fs'); const data = fs.readFileSync('temp.json', 'utf8'); const obj = JSON.parse(data); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }"
+      - name: Validate JSON
+        run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.json', 'utf8'); const obj = JSON.parse(data); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }"
+
+      - name: Test Local Action with XML
+        uses: ./
+        with:
+          feed_url: "https://modelingmarkets.substack.com/feed"
+          file_path: "temp.xml"
+
+      - name: Validate XML
+        run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.xml', 'utf8'); if (!data.includes('<rss') || !data.includes('</rss>')) { console.error('Invalid XML'); process.exit(1); }"
