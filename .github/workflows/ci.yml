@@ -57,8 +57,4 @@ jobs:
 
       - name: Validate JSON structure
         run: |
-          const obj = JSON.parse("${{ steps.test-action.outputs.feed }}");
-          if (!obj || !obj.rss || !obj.rss.$) {
-            console.error('Invalid object');
-            process.exit(1);
-          }
+          echo 'const obj = JSON.parse(`'"${{ steps.test-action.outputs.feed }}"'`); if (!obj || !obj.rss || !obj.rss.$) { console.error("Invalid object"); process.exit(1); }' | node -e        
