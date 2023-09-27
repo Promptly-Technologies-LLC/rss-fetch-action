@@ -29,7 +29,7 @@
     "format:write": "prettier --write **/*.js",
     "format:check": "prettier --check **/*.js",
     "lint": "npx eslint . -c ./.github/linters/.eslintrc.yml",
-    "package": "ncc build src/index.js --license licenses.txt",
+    "package": "ncc build src/index.js --license licenses.txt --external encoding",
     "package:watch": "npm run package -- --watch",
     "test": "(jest && make-coverage-badge --output-path ./badges/coverage.svg) || make-coverage-badge --output-path ./badges/coverage.svg",
     "all": "npm install && npm run format:write && npm run lint && npm run test && npm run package"
