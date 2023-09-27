@@ -1,19 +1,15 @@
-name: CI/CD Pipeline
+name: Continuous Integration
 
 on:
+  pull_request:
   push:
     branches:
       - main
       - "releases/*"
-  pull_request:
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  statuses: write
 
 jobs:
-  build-test-deploy:
+  test-javascript:
+    name: JavaScript Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -29,9 +25,6 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Print ncc version
-        run: npx ncc --version
-
       - name: Check Format
         run: npm run format:check
 
@@ -41,11 +34,15 @@ jobs:
       - name: Test
         run: npm run ci-test
 
-      - name: Build dist/ Directory
-        if: github.ref == 'refs/heads/main'
-        run: npm run bundle
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
 
-      - name: GitHub Actions Test with JSON
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Local Action with JSON
         uses: ./
         with:
           feed_url: "https://modelingmarkets.substack.com/feed"
@@ -54,7 +51,7 @@ jobs:
       - name: Validate JSON
         run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.json', 'utf8'); const obj = JSON.parse(data); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }"
 
-      - name: GitHub Actions Test with XML
+      - name: Test Local Action with XML
         uses: ./
         with:
           feed_url: "https://modelingmarkets.substack.com/feed"
@@ -62,9 +59,3 @@ jobs:
 
       - name: Validate XML
         run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.xml', 'utf8'); if (!data.includes('<rss') || !data.includes('</rss>')) { console.error('Invalid XML'); process.exit(1); }"
-
-      - name: Push dist/ Directory
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: 'Automated build & deploy [skip ci]'
