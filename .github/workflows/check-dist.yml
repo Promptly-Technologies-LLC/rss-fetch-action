@@ -39,6 +39,9 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install specific npm version
+        run: npm install -g npm@9.6.6
+        
       - name: Install Dependencies
         id: install
         run: npm ci
