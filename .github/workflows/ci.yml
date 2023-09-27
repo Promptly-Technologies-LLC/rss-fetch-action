@@ -1,15 +1,19 @@
-name: Continuous Integration
+name: CI/CD Pipeline
 
 on:
-  pull_request:
   push:
     branches:
       - main
       - "releases/*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  statuses: write
 
 jobs:
-  test-javascript:
-    name: JavaScript Tests
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +24,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-      
+          cache: npm
+
       - name: Install Dependencies
         run: npm ci
 
@@ -33,15 +38,10 @@ jobs:
       - name: Test
         run: npm run ci-test
 
-  test-action:
-    name: GitHub Actions Test
-    runs-on: ubuntu-latest
+      - name: Build dist/ Directory
+        run: npm run bundle
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Test Local Action with JSON
+      - name: GitHub Actions Test with JSON
         uses: ./
         with:
           feed_url: "https://modelingmarkets.substack.com/feed"
@@ -50,7 +50,7 @@ jobs:
       - name: Validate JSON
         run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.json', 'utf8'); const obj = JSON.parse(data); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }"
 
-      - name: Test Local Action with XML
+      - name: GitHub Actions Test with XML
         uses: ./
         with:
           feed_url: "https://modelingmarkets.substack.com/feed"
@@ -58,3 +58,12 @@ jobs:
 
       - name: Validate XML
         run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.xml', 'utf8'); if (!data.includes('<rss') || !data.includes('</rss>')) { console.error('Invalid XML'); process.exit(1); }"
+
+      - name: Push dist/ Directory
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@example.com"
+          git add dist/
+          git commit -m "Automated build [skip ci]"
+          git push origin main

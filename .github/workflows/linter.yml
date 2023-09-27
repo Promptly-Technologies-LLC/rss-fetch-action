@@ -11,6 +11,7 @@ on:
 jobs:
   lint:
     name: Lint Code Base
+    if: github.event_name == 'push' && github.event.head_commit.author.email == 'github-actions@example.com'
     runs-on: ubuntu-latest
 
     permissions:
