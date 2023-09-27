@@ -22,7 +22,7 @@ on:
 jobs:
   check-dist:
     name: Check dist/
-    runs-on: windows-latest  # Change this line to specify a Windows runner
+    runs-on: ubuntu-latest
 
     permissions:
       contents: read
@@ -39,10 +39,6 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Add this step to install a specific npm version
-      - name: Install specific npm version
-        run: npm install -g npm@9.6.6
-
       - name: Install Dependencies
         id: install
         run: npm ci
@@ -51,17 +47,14 @@ jobs:
         id: build
         run: npm run bundle
 
-      # Windows doesn't have `wc`, so we use PowerShell to count lines
       - name: Compare Expected and Actual Directories
         id: diff
-        shell: powershell
         run: |
-          $diff = git diff --ignore-space-at-eol --text dist/
-          if ($diff -ne "") {
-            Write-Host "Detected uncommitted changes after build. See status below:"
+          if [ "$(git diff --ignore-space-at-eol --text dist/ | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
             git diff --ignore-space-at-eol --text dist/
             exit 1
-          }
+          fi
 
       # If index.js was different than expected, upload the expected version as
       # a workflow artifact.
