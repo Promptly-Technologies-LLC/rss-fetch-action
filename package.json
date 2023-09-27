@@ -24,7 +24,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "bundle": "npm install && npm run format:write && npm run lint && npm run package",
+    "bundle": "npm run format:write && npm run lint && npm run package",
     "ci-test": "jest",
     "format:write": "prettier --write **/*.js",
     "format:check": "prettier --check **/*.js",
