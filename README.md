@@ -5,7 +5,9 @@
 
 ## Introduction
 
-The RSS Feed Fetch Action is a GitHub Action that fetches an RSS feed from a given URL and saves it to a specified file. It's designed to be a simple yet powerful tool for automating the process of fetching and storing RSS feeds in your GitHub repository for deployment to a Github Pages website.
+The RSS Feed Fetch Action is a GitHub Action that fetches an RSS feed from a given URL and saves it to a specified file. It is intended as a simple tool for automating the process of fetching and storing RSS feeds in your GitHub repository for deployment to a Github Pages website. In contrast to feed aggregators that force a bunch of different feeds into the same schema (often losing information along the way), RSS Feed Fetch fetches a single feed and handles and saves it in an unopinionated way.
+
+The RSS Feed Fetch Action supports a variety of different feed types, including RSS 1.0, RSS 2.0, Atom, RDF, and JSON. It also supports saving the feed in either `.json` or `.xml` format. Since some RSS formats include a last build date, which changes frequently, the RSS Feed Fetch Action also supports removing the `lastBuildDate` tag from the fetched feed, which can be useful for preventing unnecessary commits to your repository.
 
 ## Features
 
