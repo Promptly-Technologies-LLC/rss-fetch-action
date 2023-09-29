@@ -1,29 +1,32 @@
 // index.test.js
 const core = require('@actions/core')
 const fetch = require('isomorphic-fetch')
-const fs = require('fs')
-const { parseStringPromise } = require('xml2js')
+const path = require('path');
 const { fetchRssFeed } = require('../src/index')
 
 jest.mock('isomorphic-fetch')
 jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
   accessSync: jest.fn(),
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
   constants: { W_OK: 'some_value' },
   promises: {
+    ...jest.requireActual('fs').promises,
     access: jest.fn()
   }
 }))
-jest.mock('xml2js')
 jest.mock('@actions/core')
 
-describe('fetchRssFeed', () => {
-  beforeEach(() => {
-    jest.resetAllMocks()
-  })
+const fs = require('fs')
 
+beforeEach(() => {
+  jest.resetAllMocks();
+});
+
+describe('fetchRssFeed', () => {
+  
   it('should set failure if no feed URL is provided', async () => {
     process.env.INPUT_FEED_URL = ''
     await fetchRssFeed()
@@ -83,16 +86,35 @@ describe('fetchRssFeed', () => {
     process.env.INPUT_FILE_PATH = './feed.json'
     fetch.mockResolvedValue({
       ok: true,
-      text: jest.fn().mockResolvedValue('<rss></rss>')
+      text: jest.fn().mockResolvedValue('hello world')
     })
-    parseStringPromise.mockRejectedValue(new Error('Invalid XML'))
 
     await fetchRssFeed()
 
     expect(core.setFailed).toHaveBeenCalledWith(
-      'Failed to parse RSS feed. The feed might not be valid XML.'
+      'Unknown feed format. Only XML and JSON are supported.'
     )
   })
+
+  it('should set failure if trying to convert JSON to XML', async () => {
+    // Mock environment variables
+    process.env.INPUT_FEED_URL = 'http://example.com/feed';
+    process.env.INPUT_FILE_PATH = './feed.xml'; // XML extension
+
+    // Mock fetch to return JSON data
+    const mockJsonData = JSON.stringify({ rss: {} });
+    fetch.mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(mockJsonData)
+    });
+  
+    // Run the function and expect it to throw an error
+    await fetchRssFeed()
+
+    expect(core.setFailed).toHaveBeenCalledWith(
+      'Converting JSON feed to XML output is not supported.'
+    )
+  });
 
   it('should save the feed to a JSON file if .json file path is provided', async () => {
     process.env.INPUT_FEED_URL = 'http://example.com/feed'
@@ -101,14 +123,13 @@ describe('fetchRssFeed', () => {
       ok: true,
       text: jest.fn().mockResolvedValue('<rss></rss>')
     })
-    parseStringPromise.mockResolvedValue({ rss: {} })
     fs.accessSync.mockReturnValue(true)
 
     await fetchRssFeed()
 
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       './feed.json',
-      JSON.stringify({ rss: {} }, null, 2)
+      JSON.stringify({ rss: "" }, null, 2)
     )
   })
 
@@ -121,40 +142,55 @@ describe('fetchRssFeed', () => {
       ok: true,
       text: jest.fn().mockResolvedValue(mockXmlData)
     })
-    parseStringPromise.mockResolvedValue({ rss: {} })
 
     await fetchRssFeed()
 
     expect(fs.writeFileSync).toHaveBeenCalledWith('./feed.xml', mockXmlData)
   })
 
-  it('should remove lastBuildDate if specified', async () => {
+  it('should remove lastBuildDate from XML feed if specified', async () => {
     process.env.INPUT_FEED_URL = 'http://example.com/feed'
     process.env.INPUT_FILE_PATH = './feed.json'
     process.env.INPUT_REMOVE_LAST_BUILD_DATE = 'true'
+    const mockXmlData = '<rss><channel><lastBuildDate>some date</lastBuildDate></channel></rss>'
     fetch.mockResolvedValue({
       ok: true,
-      text: jest
-        .fn()
-        .mockResolvedValue(
-          '<rss><lastBuildDate>some date</lastBuildDate></rss>'
-        )
-    })
-    parseStringPromise.mockImplementation(async xmlString => {
-      if (xmlString.includes('<lastBuildDate>')) {
-        return { rss: { lastBuildDate: 'some date' } }
-      } else {
-        return { rss: {} }
-      }
+      text: jest.fn().mockResolvedValue(mockXmlData)
     })
 
     await fetchRssFeed()
 
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       './feed.json',
-      JSON.stringify({ rss: {} }, null, 2)
+      JSON.stringify({ rss: { channel: "" } }, null, 2)
     )
   })
+
+  it('should remove lastBuildDate from JSON feed if specified', async () => {
+    process.env.INPUT_FEED_URL = 'http://example.com/feed';
+    process.env.INPUT_FILE_PATH = './feed.json';
+    process.env.INPUT_REMOVE_LAST_BUILD_DATE = 'true';
+    
+    const mockJsonData = JSON.stringify({
+      rss: {
+        channel: {
+          lastBuildDate: 'some date'
+        }
+      }
+    });
+  
+    fetch.mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(mockJsonData)
+    });
+  
+    await fetchRssFeed();
+  
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      './feed.json',
+      JSON.stringify({ rss: { channel: {} } }, null, 2)
+    );
+  });
 
   it('should handle directory creation if directory does not exist', async () => {
     process.env.INPUT_FEED_URL = 'http://example.com/feed'
@@ -192,3 +228,60 @@ describe('fetchRssFeed', () => {
     )
   })
 })
+
+describe('Feed Type Handling', () => {
+  let atomFeed, jsonFeed, mediumFeed, podcastFeed, rdfFeed, rssFeed;
+
+  beforeAll(async () => {
+    // Read the feed data from the files
+    atomFeed = await fs.promises.readFile(path.join(__dirname, 'data', 'atom-feed-standard.xml'), 'utf8');
+    jsonFeed = await fs.promises.readFile(path.join(__dirname, 'data', 'json-feed-standard.json'), 'utf8');
+    mediumFeed = await fs.promises.readFile(path.join(__dirname, 'data', 'medium-feed.xml'), 'utf8');
+    podcastFeed = await fs.promises.readFile(path.join(__dirname, 'data', 'podcast.rss'), 'utf8');
+    rdfFeed = await fs.promises.readFile(path.join(__dirname, 'data', 'rdf-standard.xml'), 'utf8');
+    rssFeed = await fs.promises.readFile(path.join(__dirname, 'data', 'rss-feed-standard.xml'), 'utf8');
+  });
+
+  const testFeedProcessing = async (feedData, ext = '.json') => {
+    fetch.mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(feedData)
+    });
+    process.env.INPUT_FEED_URL = 'http://example.com/feed';
+    process.env.INPUT_FILE_PATH = `./feed${ext}`;
+    await fetchRssFeed();
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(fs.writeFileSync).toHaveBeenCalled();
+
+    // Check if writeFileSync was called with a JSON string
+    const [filePath, fileContent] = fs.writeFileSync.mock.calls[0];
+    expect(filePath).toBe(`./feed${ext}`);
+    if (ext === '.json') {
+      expect(() => JSON.parse(fileContent)).not.toThrow();
+    }
+  };
+
+  it('should handle Atom feeds correctly', async () => {
+    await testFeedProcessing(atomFeed);
+  });
+
+  it('should handle JSON feeds correctly', async () => {
+    await testFeedProcessing(jsonFeed, '.json');
+  });
+
+  it('should handle Medium feeds correctly', async () => {
+    await testFeedProcessing(mediumFeed);
+  });
+
+  it('should handle Podcast feeds correctly', async () => {
+    await testFeedProcessing(podcastFeed);
+  });
+
+  it('should handle RDF feeds correctly', async () => {
+    await testFeedProcessing(rdfFeed);
+  });
+
+  it('should handle standard RSS feeds correctly', async () => {
+    await testFeedProcessing(rssFeed);
+  });
+});

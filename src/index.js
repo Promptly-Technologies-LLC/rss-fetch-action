@@ -1,3 +1,4 @@
+// index.js
 const fetch = require('isomorphic-fetch')
 const fs = require('fs')
 const path = require('path')
@@ -38,41 +39,54 @@ async function fetchRssFeed() {
       )
     }
 
-    let feedData = await response.text()
-
-    // Optionally remove the lastBuildDate tag from XML
-    if (removeLastBuildDate) {
-      feedData = feedData.replace(/<lastBuildDate>.*?<\/lastBuildDate>/g, '')
-    }
-
-    // Parse the modified XML to JSON
-    let parsedData
-    try {
-      parsedData = await parseStringPromise(feedData, { explicitArray: false })
-    } catch (err) {
-      throw new Error(
-        'Failed to parse RSS feed. The feed might not be valid XML.'
-      )
-    }
-
+    // Get the file path, extension, and directory
     const ext = path.extname(filePath).toLowerCase()
-    const finalFilePath = filePath
-    const dir = path.dirname(finalFilePath)
+    const dir = path.dirname(filePath)
+
+    // Get the feed
+    let feedData = await response.text();
+
+    let parsedData;
+    try {
+      // Remove the lastBuildDate property if removeLastBuildDate is true
+      if (removeLastBuildDate) {
+        feedData = feedData.replace(/<lastBuildDate>.*?<\/lastBuildDate>/g, '');
+      }
+      // Try to parse the feed data as XML
+      parsedData = await parseStringPromise(feedData, { explicitArray: false });
+    } catch (err) {
+      // If the feed data is not in XML format, try to parse it as JSON
+      try {
+        parsedData = JSON.parse(feedData);
+      } catch (err) {
+        throw new Error('Unknown feed format. Only XML and JSON are supported.');
+      }
+      // Throw an error if the feed is JSON but the file extension is .xml
+      if (ext === '.xml') {
+        throw new Error('Converting JSON feed to XML output is not supported.');
+      }
+      // Remove the lastBuildDate property if removeLastBuildDate is true
+      if (removeLastBuildDate && parsedData.rss && parsedData.rss.channel && parsedData.rss.channel.lastBuildDate) {
+        delete parsedData.rss.channel.lastBuildDate;
+      }
+    }
 
     try {
-      // Check if directory exists, if not create it
+      // Check if directory exists; if not, create it
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
       }
 
+      // Write the feed data to the file
       if (ext === '.json') {
-        const jsonFeedData = JSON.stringify(parsedData, null, 2)
-        fs.writeFileSync(finalFilePath, jsonFeedData)
+        const jsonFeedData = JSON.stringify(parsedData, null, 2);
+        fs.writeFileSync(filePath, jsonFeedData);
       } else if (ext === '.xml') {
-        fs.writeFileSync(finalFilePath, feedData)
-      }
+        // If extension is .xml, use the original XML feed data
+        fs.writeFileSync(filePath, feedData);
+      }      
 
-      console.log(`RSS feed saved to ${finalFilePath} successfully!`)
+      console.log(`RSS feed saved to ${filePath} successfully!`)
     } catch (err) {
       throw new Error(
         `Failed to write the file due to permissions or other file system error: ${err.message}`
