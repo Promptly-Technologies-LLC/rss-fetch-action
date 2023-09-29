@@ -44,30 +44,35 @@ async function fetchRssFeed() {
     const dir = path.dirname(filePath)
 
     // Get the feed
-    let feedData = await response.text();
+    let feedData = await response.text()
 
-    let parsedData;
+    let parsedData
     try {
       // Remove the lastBuildDate property if removeLastBuildDate is true
       if (removeLastBuildDate) {
-        feedData = feedData.replace(/<lastBuildDate>.*?<\/lastBuildDate>/g, '');
+        feedData = feedData.replace(/<lastBuildDate>.*?<\/lastBuildDate>/g, '')
       }
       // Try to parse the feed data as XML
-      parsedData = await parseStringPromise(feedData, { explicitArray: false });
-    } catch (err) {
+      parsedData = await parseStringPromise(feedData, { explicitArray: false })
+    } catch (xmlErr) {
       // If the feed data is not in XML format, try to parse it as JSON
       try {
-        parsedData = JSON.parse(feedData);
-      } catch (err) {
-        throw new Error('Unknown feed format. Only XML and JSON are supported.');
+        parsedData = JSON.parse(feedData)
+      } catch (jsonErr) {
+        throw new Error('Unknown feed format. Only XML and JSON are supported.')
       }
       // Throw an error if the feed is JSON but the file extension is .xml
       if (ext === '.xml') {
-        throw new Error('Converting JSON feed to XML output is not supported.');
+        throw new Error('Converting JSON feed to XML output is not supported.')
       }
       // Remove the lastBuildDate property if removeLastBuildDate is true
-      if (removeLastBuildDate && parsedData.rss && parsedData.rss.channel && parsedData.rss.channel.lastBuildDate) {
-        delete parsedData.rss.channel.lastBuildDate;
+      if (
+        removeLastBuildDate &&
+        parsedData.rss &&
+        parsedData.rss.channel &&
+        parsedData.rss.channel.lastBuildDate
+      ) {
+        delete parsedData.rss.channel.lastBuildDate
       }
     }
 
@@ -79,12 +84,12 @@ async function fetchRssFeed() {
 
       // Write the feed data to the file
       if (ext === '.json') {
-        const jsonFeedData = JSON.stringify(parsedData, null, 2);
-        fs.writeFileSync(filePath, jsonFeedData);
+        const jsonFeedData = JSON.stringify(parsedData, null, 2)
+        fs.writeFileSync(filePath, jsonFeedData)
       } else if (ext === '.xml') {
         // If extension is .xml, use the original XML feed data
-        fs.writeFileSync(filePath, feedData);
-      }      
+        fs.writeFileSync(filePath, feedData)
+      }
 
       console.log(`RSS feed saved to ${filePath} successfully!`)
     } catch (err) {
