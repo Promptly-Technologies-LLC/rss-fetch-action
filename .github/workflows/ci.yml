@@ -52,4 +52,20 @@ jobs:
           fetch_options: "{}"
 
       - name: Validate JSON
-        run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.json', 'utf8'); const obj = JSON.parse(data); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }"
+        run: |
+          const fs = require('fs');
+          const data = fs.readFileSync('./feed.json', 'utf8');
+          const obj = JSON.parse(data);
+          if (!obj || 
+              !obj.title || 
+              !obj.link || 
+              !obj.description || 
+              !obj.generator || 
+              !obj.language || 
+              !obj.published || 
+              !Array.isArray(obj.entries) || 
+              obj.entries.length === 0 || 
+              !obj.entries[0]['content:encoded']) {
+            console.error('Invalid object');
+            process.exit(1);
+          }
