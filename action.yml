@@ -1,6 +1,8 @@
 name: 'RSS Feed Fetch Action'
 description: 'Fetches an RSS feed and saves it to a file'
 author: 'Christopher C. Smith <christopher.smith@promptlytechnologies.com>'
+branding:
+  icon: 'rss'
 
 inputs:
   feed_url:
