@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - "releases/*"
+      - feed-extractor-version
 
 jobs:
   test-javascript:
@@ -42,20 +43,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Test Local Action with JSON
+      - name: Test Github Action with JSON
         uses: ./
         with:
           feed_url: "https://modelingmarkets.substack.com/feed"
-          file_path: "temp.json"
+          file_path: "./feed.json"
+          parser_options: "{\"useISODateFormat\": false, \"getExtraEntryFields\": \"(feedEntry) => { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }\"}"
+          fetch_options: "{}"
 
       - name: Validate JSON
-        run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.json', 'utf8'); const obj = JSON.parse(data); if (!obj || !obj.rss || !obj.rss.$) { console.error('Invalid object'); process.exit(1); }"
-
-      - name: Test Local Action with XML
-        uses: ./
-        with:
-          feed_url: "https://modelingmarkets.substack.com/feed"
-          file_path: "temp.xml"
-
-      - name: Validate XML
-        run: node -e "const fs = require('fs'); const data = fs.readFileSync('temp.xml', 'utf8'); if (!data.includes('<rss') || !data.includes('</rss>')) { console.error('Invalid XML'); process.exit(1); }"
+        run: |
+          node -e "
+          const fs = require('fs');
+          const data = fs.readFileSync('./feed.json', 'utf8');
+          const obj = JSON.parse(data);
+          if (!obj || 
+              !obj.title || 
+              !obj.link || 
+              !obj.description || 
+              !obj.generator || 
+              !obj.language || 
+              !obj.published || 
+              !Array.isArray(obj.entries) || 
+              obj.entries.length === 0 || 
+              !obj.entries[0]['content:encoded']) {
+            console.error('Invalid object');
+            process.exit(1);
+          }
+          "
+      

@@ -1,319 +1,247 @@
-// index.test.js
-const core = require('@actions/core')
-const fetch = require('isomorphic-fetch')
-const path = require('path')
-const { fetchRssFeed } = require('../src/index')
+// __tests__/index.test.js
+import fs from 'fs'
+import path from 'path'
+import core from '@actions/core'
+import nock from 'nock'
+import { fetchRssFeed } from '../src/index'
+import { extract } from '@extractus/feed-extractor'
 
-jest.mock('isomorphic-fetch')
+jest.mock('@extractus/feed-extractor', () => ({
+  extract: jest.fn()
+}))
+
+// Mock the core module
+jest.mock('@actions/core', () => ({
+  setFailed: jest.fn()
+}))
+
+// Mock the fs module except for readFileSync
 jest.mock('fs', () => ({
-  ...jest.requireActual('fs'),
-  accessSync: jest.fn(),
+  promises: {
+    access: jest.fn()
+  },
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),
-  writeFileSync: jest.fn(),
-  constants: { W_OK: 'some_value' },
-  promises: {
-    ...jest.requireActual('fs').promises,
-    access: jest.fn()
-  }
+  writeFileSync: jest.fn()
 }))
-jest.mock('@actions/core')
-
-const fs = require('fs')
 
 beforeEach(() => {
+  // Reset the mocks and environment variables
   jest.resetAllMocks()
+  process.env.INPUT_FEED_URL = 'https://example.com/feed'
+  process.env.INPUT_FILE_PATH = './feed.json'
+  process.env.INPUT_PARSER_OPTIONS = JSON.stringify({ useISODateFormat: true })
+  process.env.INPUT_FETCH_OPTIONS = '{}'
 })
 
-describe('fetchRssFeed', () => {
-  it('should set failure if no feed URL is provided', async () => {
-    process.env.INPUT_FEED_URL = ''
-    await fetchRssFeed()
-    expect(core.setFailed).toHaveBeenCalledWith('Feed URL is not provided')
-  })
+describe('fetchRssFeed function', () => {
+  describe('Validation tests', () => {
+    // Mocks Needed:
+    // 1. Environment variables for feedUrl and filePath
+    it('should set failed if feed URL is not provided', async () => {
+      // Clear the environment variable for feed URL
+      delete process.env.INPUT_FEED_URL
 
-  it('should set failure if no file path is provided', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = '' // Setting file path to empty
-    await fetchRssFeed()
-    expect(core.setFailed).toHaveBeenCalledWith('File path is not provided')
-  })
+      // Call the function
+      await fetchRssFeed()
 
-  // Test case for unsupported file extension
-  it('should set failure if unsupported file extension is provided', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.txt' // Unsupported extension
-
-    await fetchRssFeed()
-
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'File extension must be .json or .xml'
-    )
-  })
-
-  it('should set failure if fetch returns a non-ok response', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    fetch.mockResolvedValue({
-      ok: false,
-      status: 404,
-      statusText: 'Not Found'
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Feed URL is not provided or invalid'
+      )
     })
 
-    await fetchRssFeed()
+    it('should set failed if file path is not provided', async () => {
+      // Clear the environment variable for file path
+      delete process.env.INPUT_FILE_PATH
 
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'Failed to fetch RSS feed (404 Not Found)'
-    )
-  })
+      // Call the function
+      await fetchRssFeed()
 
-  it('should set failure if fetch fails due to other error', async () => {
-    expect.assertions(1)
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    fetch.mockRejectedValue(new Error('Network error'))
-
-    await fetchRssFeed()
-
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'Failed to fetch RSS feed due to network error or invalid URL'
-    )
-  })
-
-  it('should set failure if RSS parsing fails', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue('hello world')
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith('File path is not provided')
     })
 
-    await fetchRssFeed()
+    it('should set failed if file extension is not .json', async () => {
+      // Set the environment variable for file path with an invalid extension
+      process.env.INPUT_FILE_PATH = './feed.txt'
 
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'Unknown feed format. Only XML and JSON are supported.'
-    )
+      // Call the function
+      await fetchRssFeed()
+
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'File path extension must be .json'
+      )
+    })
   })
 
-  it('should set failure if trying to convert JSON to XML', async () => {
-    // Mock environment variables
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.xml' // XML extension
+  describe('Input Parsing', () => {
+    it('should set failed if parserOptions is invalid JSON', async () => {
+      // Set invalid JSON for parserOptions
+      process.env.INPUT_PARSER_OPTIONS = 'invalid JSON'
 
-    // Mock fetch to return JSON data
-    const mockJsonData = JSON.stringify({ rss: {} })
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue(mockJsonData)
+      // Call the function
+      await fetchRssFeed()
+
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Failed to parse parserOptions input: Unexpected token \'i\', "invalid JSON" is not valid JSON'
+      )
     })
 
-    // Run the function and expect it to throw an error
-    await fetchRssFeed()
+    it('should set failed if fetchOptions is invalid JSON', async () => {
+      // Set invalid JSON for fetchOptions
+      process.env.INPUT_FETCH_OPTIONS = 'invalid JSON'
 
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'Converting JSON feed to XML output is not supported.'
-    )
-  })
+      // Call the function
+      await fetchRssFeed()
 
-  it('should save the feed to a JSON file if .json file path is provided', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue('<rss></rss>')
-    })
-    fs.accessSync.mockReturnValue(true)
-
-    await fetchRssFeed()
-
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      './feed.json',
-      JSON.stringify({ rss: '' }, null, 2)
-    )
-  })
-
-  // Test case for .xml extension
-  it('should save the feed to an XML file if .xml extension is provided', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.xml'
-    const mockXmlData = '<rss></rss>'
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue(mockXmlData)
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Failed to parse fetchOptions input: Unexpected token \'i\', "invalid JSON" is not valid JSON'
+      )
     })
 
-    await fetchRssFeed()
+    it('should evaluate function in parserOptions if provided as string', async () => {
+      // Set a function as a string in parserOptions
+      process.env.INPUT_PARSER_OPTIONS = JSON.stringify({
+        getExtraEntryFields:
+          "function(feedEntry) { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }"
+      })
 
-    expect(fs.writeFileSync).toHaveBeenCalledWith('./feed.xml', mockXmlData)
-  })
+      // Mock the extract function to return a specific object
+      extract.mockResolvedValueOnce({ title: 'Test Feed' })
 
-  it('should remove lastBuildDate from XML feed if specified', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    process.env.INPUT_REMOVE_LAST_BUILD_DATE = 'true'
-    const mockXmlData =
-      '<rss><channel><lastBuildDate>some date</lastBuildDate></channel></rss>'
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue(mockXmlData)
-    })
+      // Call the function
+      await fetchRssFeed()
 
-    await fetchRssFeed()
-
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      './feed.json',
-      JSON.stringify({ rss: { channel: '' } }, null, 2)
-    )
-  })
-
-  it('should remove lastBuildDate from JSON feed if specified', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    process.env.INPUT_REMOVE_LAST_BUILD_DATE = 'true'
-
-    const mockJsonData = JSON.stringify({
-      rss: {
-        channel: {
-          lastBuildDate: 'some date'
-        }
+      // Expect that extract was called with the evaluated function
+      const expectedParserOptions = {
+        getExtraEntryFields: expect.any(Function)
       }
+      expect(extract).toHaveBeenCalledWith(
+        'https://example.com/feed',
+        expectedParserOptions,
+        {}
+      )
+    })
+  })
+
+  describe('extract function interaction', () => {
+    it('should call extract function with correct arguments', async () => {
+      // Verify that extract function is mocked
+      expect(jest.isMockFunction(extract)).toBe(true)
+
+      // Call the function
+      await fetchRssFeed()
+
+      // Expect that extract was called with the correct arguments
+      expect(jest.isMockFunction(extract)).toBe(true)
+      expect(extract).toHaveBeenCalledWith(
+        'https://example.com/feed',
+        { useISODateFormat: true },
+        {}
+      )
     })
 
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue(mockJsonData)
+    it('should handle errors thrown by extract function', async () => {
+      // Verify that extract function is mocked
+      expect(jest.isMockFunction(extract)).toBe(true)
+
+      // Make extract throw an error
+      extract.mockImplementationOnce(() => {
+        throw new Error('Some error')
+      })
+
+      // Call the function
+      await fetchRssFeed()
+
+      // Expect that core.setFailed was called with the expected error message
+      expect(jest.isMockFunction(extract)).toBe(true)
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Failed to fetch or parse feed: Some error'
+      )
+    })
+  })
+
+  describe('fetchRssFeed function', () => {
+    describe('File operations', () => {
+      it('should create directory if it does not exist', async () => {
+        // Return javascript object from extract function
+        extract.mockResolvedValueOnce({ title: 'Test Feed' })
+
+        // Setup
+        fs.existsSync.mockReturnValue(false)
+
+        // Execute
+        await fetchRssFeed()
+
+        // Verify
+        expect(fs.mkdirSync).toHaveBeenCalledWith(
+          path.dirname(process.env.INPUT_FILE_PATH),
+          { recursive: true }
+        )
+      })
+
+      it('should write parsed data to the file', async () => {
+        // Return javascript object from extract function
+        extract.mockResolvedValueOnce({ title: 'Test Feed' })
+
+        // Setup
+        fs.existsSync.mockReturnValue(true)
+
+        // Execute
+        await fetchRssFeed()
+
+        // Verify
+        expect(fs.writeFileSync).toHaveBeenCalledWith(
+          process.env.INPUT_FILE_PATH,
+          JSON.stringify({ title: 'Test Feed' }, null, 2)
+        )
+      })
+    })
+  })
+
+  describe('Success logging', () => {
+    let logSpy
+
+    beforeEach(() => {
+      // Spy on console.log
+      logSpy = jest.spyOn(console, 'log').mockImplementation()
     })
 
-    await fetchRssFeed()
-
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      './feed.json',
-      JSON.stringify({ rss: { channel: {} } }, null, 2)
-    )
-  })
-
-  it('should handle directory creation if directory does not exist', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './someDir/feed.json'
-    fs.existsSync.mockReturnValue(false)
-
-    // Mock fetch for this test
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue('<rss></rss>')
+    afterEach(() => {
+      // Cleanup the spy
+      logSpy.mockRestore()
     })
 
-    await fetchRssFeed()
+    it('should log success message if everything goes well', async () => {
+      // Verify that extract function is mocked
+      expect(jest.isMockFunction(extract)).toBe(true)
 
-    expect(fs.mkdirSync).toHaveBeenCalledWith('./someDir', { recursive: true })
-  })
+      // Return javascript object from extract function
+      extract.mockResolvedValueOnce({ title: 'Test Feed' })
 
-  it('should handle file write permission errors gracefully', async () => {
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = './feed.json'
-    fs.writeFileSync.mockImplementation(() => {
-      throw new Error('Permission denied')
+      // Execute the function
+      await fetchRssFeed()
+
+      // Verify that console.log was called with the success message
+      expect(logSpy).toHaveBeenCalledWith(
+        `RSS feed saved to ${process.env.INPUT_FILE_PATH} successfully!`
+      )
     })
-
-    // Mock fetch for this test
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue('<rss></rss>')
-    })
-
-    await fetchRssFeed()
-
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'Failed to write the file due to permissions or other file system error: Permission denied'
-    )
-  })
-})
-
-describe('Feed Type Handling', () => {
-  let atomFeed
-  let jsonFeed
-  let mediumFeed
-  let podcastFeed
-  let rdfFeed
-  let rssFeed
-
-  beforeAll(async () => {
-    // Read the feed data from the files
-    atomFeed = await fs.promises.readFile(
-      path.join(__dirname, 'data', 'atom-feed-standard.xml'),
-      'utf8'
-    )
-    jsonFeed = await fs.promises.readFile(
-      path.join(__dirname, 'data', 'json-feed-standard.json'),
-      'utf8'
-    )
-    mediumFeed = await fs.promises.readFile(
-      path.join(__dirname, 'data', 'medium-feed.xml'),
-      'utf8'
-    )
-    podcastFeed = await fs.promises.readFile(
-      path.join(__dirname, 'data', 'podcast.rss'),
-      'utf8'
-    )
-    rdfFeed = await fs.promises.readFile(
-      path.join(__dirname, 'data', 'rdf-standard.xml'),
-      'utf8'
-    )
-    rssFeed = await fs.promises.readFile(
-      path.join(__dirname, 'data', 'rss-feed-standard.xml'),
-      'utf8'
-    )
   })
 
-  const testFeedProcessing = async (feedData, ext = '.json') => {
-    fetch.mockResolvedValue({
-      ok: true,
-      text: jest.fn().mockResolvedValue(feedData)
-    })
-    process.env.INPUT_FEED_URL = 'http://example.com/feed'
-    process.env.INPUT_FILE_PATH = `./feed${ext}`
-    await fetchRssFeed()
+  // Ensure that functions are mocked as expected
+  it('should have mocked functions', () => {
+    // Verify that fs and path functions are mocked
+    expect(jest.isMockFunction(fs.promises.access)).toBe(true)
+    expect(jest.isMockFunction(fs.existsSync)).toBe(true)
+    expect(jest.isMockFunction(fs.mkdirSync)).toBe(true)
+    expect(jest.isMockFunction(fs.writeFileSync)).toBe(true)
 
-    expect(core.setFailed).not.toHaveBeenCalled()
-    expect(fs.writeFileSync).toHaveBeenCalled()
-
-    // Check if writeFileSync was called with a JSON string
-    const [filePath, fileContent] = fs.writeFileSync.mock.calls[0]
-    expect(filePath).toBe(`./feed${ext}`)
-    if (ext === '.json') {
-      expect(() => JSON.parse(fileContent)).not.toThrow()
-    }
-
-    return true // Return true to indicate success
-  }
-
-  it('should handle Atom feeds correctly', async () => {
-    const result = await testFeedProcessing(atomFeed)
-    expect(result).toBe(true)
-  })
-
-  it('should handle JSON feeds correctly', async () => {
-    const result = await testFeedProcessing(jsonFeed)
-    expect(result).toBe(true)
-  })
-
-  it('should handle Medium feeds correctly', async () => {
-    const result = await testFeedProcessing(mediumFeed)
-    expect(result).toBe(true)
-  })
-
-  it('should handle Podcast feeds correctly', async () => {
-    const result = await testFeedProcessing(podcastFeed)
-    expect(result).toBe(true)
-  })
-
-  it('should handle RDF feeds correctly', async () => {
-    const result = await testFeedProcessing(rdfFeed)
-    expect(result).toBe(true)
-  })
-
-  it('should handle standard RSS feeds correctly', async () => {
-    const result = await testFeedProcessing(rssFeed)
-    expect(result).toBe(true)
+    // Verify that readFileSync function is not mocked
+    expect(jest.isMockFunction(fs.readFileSync)).toBe(false)
   })
 })
