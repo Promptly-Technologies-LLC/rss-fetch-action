@@ -76,7 +76,7 @@ By default, the saved output will have the format:
 
 ## Advanced Usage
 
-To customize the fetch and parser options, you can use the parser_options and fetch_options inputs. For example, if you want to fetch the original, unaltered feed rather than impose a standardized format, you can set `parser_options` to `{ normalization: false }`. For more information on the available options, see the [feed-extractor README](https://www.npmjs.com/package/@extractus/feed-extractor#extract).
+To customize the fetch and parser options, you can use the parser_options and fetch_options inputs. For example, if you want to fetch the original, unaltered feed rather than impose a standardized format, you can set `parser_options` to `{"normalization": false}`. For more information on the available options, see the [feed-extractor README](https://www.npmjs.com/package/@extractus/feed-extractor#extract).
 
 In the example below, we fetch a Substack Atom feed and save it to the file `./feed.json`. Because we want to get entire blog posts rather than just titles and descriptions, we request the 'content:encoded' field for each entry in the Atom feed. We also request a human-readable date format rather than an ISO timestamp. To achieve this, we pass a `parser_options` object with `useISODateFormat` and `getExtraEntryFields`.
 
