@@ -53,6 +53,7 @@ jobs:
 
       - name: Validate JSON
         run: |
+          node -e "
           const fs = require('fs');
           const data = fs.readFileSync('./feed.json', 'utf8');
           const obj = JSON.parse(data);
@@ -69,3 +70,5 @@ jobs:
             console.error('Invalid object');
             process.exit(1);
           }
+          "
+      
