@@ -1,8 +1,6 @@
 name: 'RSS Feed Fetch Action'
 description: 'Fetches an RSS feed and saves it to a file'
 author: 'Christopher C. Smith <christopher.smith@promptlytechnologies.com>'
-branding:
-  icon: 'rss'
 
 inputs:
   feed_url:
@@ -11,10 +9,12 @@ inputs:
   file_path:
     description: 'The relative file path at which to save the fetched RSS feed'
     required: true
-  remove_last_build_date:
-    description: 'Remove the lastBuildDate tag from the fetched RSS feed for easier diffing'
+  parser_options:
+    description: 'JSON string for parser options'
     required: false
-    default: false
+  fetch_options:
+    description: 'JSON string for fetch options'
+    required: false
 
 runs:
   using: node20
