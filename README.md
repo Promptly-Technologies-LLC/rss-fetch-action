@@ -7,7 +7,7 @@
 
 The RSS Feed Fetch Action is a GitHub Action designed to automate the fetching of RSS feeds. It fetches an RSS feed from a given URL and saves it to a specified file in your GitHub repository. This action is particularly useful for populating content on GitHub Pages websites or other static site generators.
 
-This GitHub Action is a wrapper around the [feed-extractor](https://www.npmjs.com/package/@extractus/feed-extractor)library's extract function. Understanding the extract function's parameters will enable you to make the most out of this GitHub Action.
+This GitHub Action is a wrapper around the [feed-extractor](https://www.npmjs.com/package/@extractus/feed-extractor) library's `extract` function. Understanding the `extract` function's parameters will enable you to make the most of this GitHub Action. This tool offers powerful parsing and standardization across a wide range of different feed formats, while also enabling you to save feeds in an unopinionated and non-standardized way if you so choose.
 
 ## Features
 
