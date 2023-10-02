@@ -101,8 +101,8 @@ jobs:
       with:
         feed_url: https://knowledgeworkersguide.substack.com/feed
         file_path: ./feed.json
-        parser_options: {"useISODateFormat": false, "getExtraEntryFields": "(feedEntry) => { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }"}
-        fetch_options: {}
+        parser_options: "{\"useISODateFormat\": false, \"getExtraEntryFields\": \"(feedEntry) => { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }\"}"
+        fetch_options: "{}"
     
     - name: Commit and push changes to repository
       uses: stefanzweifel/git-auto-commit-action@v4
