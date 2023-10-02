@@ -14,6 +14,7 @@ This GitHub Action is a wrapper around the [feed-extractor](https://www.npmjs.co
 - Fetches RSS, Atom, RDF, and JSON feeds
 - Customizable parser and fetch options
 - Saves the fetched RSS feed to a specified `.json` file
+- Optionally removes the `published` field from the fetched feed to prevent unnecessary commits
 
 ## Usage
 
@@ -76,9 +77,11 @@ By default, the saved output will have the format:
 
 ## Advanced Usage
 
-To customize the fetch and parser options, you can use the parser_options and fetch_options inputs. For example, if you want to fetch the original, unaltered feed rather than impose a standardized format, you can set `parser_options` to `{"normalization": false}`. For more information on the available options, see the [feed-extractor README](https://www.npmjs.com/package/@extractus/feed-extractor#extract).
+To customize the fetch and parser options used in calling `feed-extractor`, you can use the `parser_options` and `fetch_options` inputs. For example, if you want to fetch the original, unaltered feed rather than impose a standardized format, you can set `parser_options` to `{"normalization": false}`. For more information on the available options, see the [feed-extractor README](https://www.npmjs.com/package/@extractus/feed-extractor#extract).
 
-In the example below, we fetch a Substack Atom feed and save it to the file `./feed.json`. Because we want to get entire blog posts rather than just titles and descriptions, we request the 'content:encoded' field for each entry in the Atom feed. We also request a human-readable date format rather than an ISO timestamp. To achieve this, we pass a `parser_options` object with `useISODateFormat` and `getExtraEntryFields`.
+A `remove_published` option is also available. If set to `true`, this option will remove the `published` field from the fetched feed. This is useful if you want to prevent unnecessary commits to your repository. Many Atom feed providers update the `published` field once an hour, causing the feed to appear as if it has been updated (fail a `diff` check) even though none of the actual content has changed. You can prevent this from happening by removing the `published` field.
+
+In the example below, we fetch a Substack Atom feed and save it to the file `./feed.json`. Because we want to get entire blog posts rather than just titles and descriptions, we request the 'content:encoded' field for each entry in the Atom feed. We also request a human-readable date format rather than an ISO timestamp. To achieve this, we pass a `parser_options` object with `useISODateFormat` and `getExtraEntryFields`. And finally, we opt to remove the published date from the blog feed, since many Atom feed providers update this field once an hour, causing unnecessary commits to the repository.
 
 ```yaml
 name: Fetch RSS Feed
@@ -101,8 +104,9 @@ jobs:
       with:
         feed_url: https://knowledgeworkersguide.substack.com/feed
         file_path: ./feed.json
-        parser_options: {"useISODateFormat": false, "getExtraEntryFields": "(feedEntry) => { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }"}
-        fetch_options: {}
+        parser_options: "{\"useISODateFormat\": false, \"getExtraEntryFields\": \"(feedEntry) => { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }\"}"
+        fetch_options: "{}"
+        remove_published: true
     
     - name: Commit and push changes to repository
       uses: stefanzweifel/git-auto-commit-action@v4
@@ -135,3 +139,8 @@ A JSON string representing parser options. This maps directly to the parserOptio
 
 **Optional**
 A JSON string representing fetch options. This maps directly to the fetchOptions parameter in the feed-extractor library's extract function. For example, to set custom headers, you can pass {"headers": {"user-agent": "Custom-Agent"}}.
+
+### `remove_published`
+
+**Optional**
+A boolean value indicating whether to remove the `published` field from the fetched feed.
