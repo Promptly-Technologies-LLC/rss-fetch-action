@@ -17,6 +17,10 @@ inputs:
   fetch_options:
     description: 'JSON string for fetch options'
     required: false
+  remove_published:
+    description: 'Remove the published date from the feed for easier diffing'
+    required: false
+    default: false
 
 runs:
   using: node20

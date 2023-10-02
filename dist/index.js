@@ -2735,6 +2735,7 @@ async function fetchRssFeed() {
     const extract = feedExtractor.extract
     const feedUrl = process.env.INPUT_FEED_URL
     const filePath = process.env.INPUT_FILE_PATH
+    const removePublished = process.env.INPUT_REMOVE_PUBLISHED
 
     let parserOptions
     let fetchOptions
@@ -2770,6 +2771,16 @@ async function fetchRssFeed() {
       throw new Error('Feed URL is not provided or invalid')
     }
 
+    // Validate and convert removePublished to boolean, if provided
+    let removePublishedBool = false // Default value
+    if (typeof removePublished === 'string') {
+      if (removePublished === 'true') {
+        removePublishedBool = true
+      } else if (removePublished !== 'false') {
+        throw new Error('removePublished must be either "true" or "false"')
+      }
+    }
+
     // Validate filePath
     if (!filePath) {
       throw new Error('File path is not provided')
@@ -2790,7 +2801,12 @@ async function fetchRssFeed() {
       throw new Error('Parsed data is invalid')
     }
 
-    // Check if directory exists, if not create it
+    // Remove top-level published field if removePublished is set to true
+    if (removePublishedBool) {
+      delete parsedData.published
+    }
+
+    // Check if directory exists; if not, create it
     const dir = path.dirname(filePath)
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })

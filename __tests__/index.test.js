@@ -32,6 +32,7 @@ beforeEach(() => {
   process.env.INPUT_FILE_PATH = './feed.json'
   process.env.INPUT_PARSER_OPTIONS = JSON.stringify({ useISODateFormat: true })
   process.env.INPUT_FETCH_OPTIONS = '{}'
+  process.env.INPUT_REMOVE_PUBLISHED = 'false'
 })
 
 describe('fetchRssFeed function', () => {
@@ -161,6 +162,57 @@ describe('fetchRssFeed function', () => {
       expect(jest.isMockFunction(extract)).toBe(true)
       expect(core.setFailed).toHaveBeenCalledWith(
         'Failed to fetch or parse feed: Some error'
+      )
+    })
+  })
+
+  describe('removePublished behavior', () => {
+    it('should not remove published field if removePublished is not set', async () => {
+      // Setup
+      delete process.env.INPUT_REMOVE_PUBLISHED
+      extract.mockResolvedValueOnce({
+        title: 'Test Feed',
+        published: 'some date'
+      })
+
+      // Execute
+      await fetchRssFeed()
+
+      // Verify
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        process.env.INPUT_FILE_PATH,
+        JSON.stringify({ title: 'Test Feed', published: 'some date' }, null, 2)
+      )
+    })
+
+    it('should remove published field if removePublished is set to "true"', async () => {
+      // Setup
+      process.env.INPUT_REMOVE_PUBLISHED = 'true'
+      extract.mockResolvedValueOnce({
+        title: 'Test Feed',
+        published: 'some date'
+      })
+
+      // Execute
+      await fetchRssFeed()
+
+      // Verify
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        process.env.INPUT_FILE_PATH,
+        JSON.stringify({ title: 'Test Feed' }, null, 2)
+      )
+    })
+
+    it('should set failed if removePublished is set to an invalid value', async () => {
+      // Setup
+      process.env.INPUT_REMOVE_PUBLISHED = 'invalid'
+
+      // Execute
+      await fetchRssFeed()
+
+      // Verify
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'removePublished must be either "true" or "false"'
       )
     })
   })
