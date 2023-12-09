@@ -1,7 +1,7 @@
 {
   "name": "rss-fetch-action",
   "description": "Javascript GitHub Action to fetch an RSS feed",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": "Christopher C. Smith <christopher.smith@promptlytechnologies.com",
   "private": true,
   "homepage": "https://github.com/Promptly-Technologies-LLC/rss-fetch-action#readme",
