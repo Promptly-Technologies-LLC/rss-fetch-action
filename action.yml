@@ -6,10 +6,10 @@ branding:
 
 inputs:
   feed_url:
-    description: 'The URL of the RSS feed to fetch'
+    description: 'URL or JSON array of URLs of the RSS feed(s) to fetch'
     required: true
   file_path:
-    description: 'The relative file path at which to save the fetched RSS feed'
+    description: 'Relative file path or JSON array of file paths at which to save the fetched RSS feed(s)'
     required: true
   parser_options:
     description: 'JSON string for parser options'
