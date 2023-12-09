@@ -2,7 +2,6 @@
 import fs from 'fs'
 import path from 'path'
 import core from '@actions/core'
-import nock from 'nock'
 import { fetchRssFeed } from '../src/index'
 import { extract } from '@extractus/feed-extractor'
 

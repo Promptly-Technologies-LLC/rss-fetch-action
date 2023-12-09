@@ -645,7 +645,7 @@ Builder.prototype.j2x = function(jObj, level) {
   let attrStr = '';
   let val = '';
   for (let key in jObj) {
-    if(!jObj.hasOwnProperty(key)) continue;
+    if(!Object.prototype.hasOwnProperty.call(jObj, key)) continue;
     if (typeof jObj[key] === 'undefined') {
       // supress undefined node only if it is not an attribute
       if (this.isAttribute(key)) {
@@ -2399,7 +2399,7 @@ FetchError.prototype.name = 'FetchError';
 
 let convert;
 try {
-	convert = (__webpack_require__(3975).convert);
+	convert = (__webpack_require__(2877).convert);
 } catch (e) {}
 
 const INTERNALS = Symbol('Body internals');
@@ -6321,6 +6321,14 @@ module.exports.implForWrapper = function (wrapper) {
 
 /***/ }),
 
+/***/ 2877:
+/***/ ((module) => {
+
+module.exports = eval("require")("encoding");
+
+
+/***/ }),
+
 /***/ 2290:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
@@ -6968,7 +6976,7 @@ const parseRssFeed_transform = (item, options) => {
     title: getText(title),
     link: getPureUrl(link, guid, baseUrl),
     published,
-    description: buildDescription(description || htmlContent, descriptionMaxLen),
+    description: buildDescription(htmlContent, descriptionMaxLen),
   }
 
   const extraFields = getExtraEntryFields(item)
@@ -7111,7 +7119,7 @@ const parseAtomFeed_transform = (item, options) => {
     title: getText(title),
     link: getPureUrl(link, id, baseUrl),
     published: useISODateFormat ? toISODateString(pubDate) : pubDate,
-    description: buildDescription(summary || htmlContent, descriptionMaxLen),
+    description: buildDescription(htmlContent, descriptionMaxLen),
   }
 
   const extraFields = getExtraEntryFields(item)
@@ -7243,7 +7251,7 @@ const parseRdfFeed_transform = (item, options) => {
     title: getText(title),
     link: getPureUrl(link, guid, baseUrl),
     published,
-    description: buildDescription(description || htmlContent, descriptionMaxLen),
+    description: buildDescription(htmlContent, descriptionMaxLen),
   }
 
   const extraFields = getExtraEntryFields(item)

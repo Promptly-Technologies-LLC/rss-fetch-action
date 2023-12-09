@@ -29,7 +29,7 @@
     "format:write": "prettier --write **/*.js",
     "format:check": "prettier --check **/*.js",
     "lint": "npx eslint . -c ./.github/linters/.eslintrc.yml",
-    "package": "ncc build src/index.js --license licenses.txt --external encoding",
+    "package": "ncc build src/index.js --license licenses.txt",
     "package:watch": "npm run package -- --watch",
     "test": "(jest && make-coverage-badge --output-path ./badges/coverage.svg) || make-coverage-badge --output-path ./badges/coverage.svg",
     "all": "npm install && npm run format:write && npm run lint && npm run test && npm run package"
@@ -66,7 +66,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.10.1",
-    "@extractus/feed-extractor": "^7.0.6"
+    "@extractus/feed-extractor": "^7.0.8"
   },
   "devDependencies": {
     "@babel/core": "^7.23.5",
