@@ -7,12 +7,12 @@ import { extract } from '@extractus/feed-extractor'
 
 jest.mock('@extractus/feed-extractor', () => ({
   extract: jest.fn()
-}));
+}))
 
 // Mock the core module
 jest.mock('@actions/core', () => ({
   setFailed: jest.fn()
-}));
+}))
 
 // Mock the fs module except for readFileSync
 jest.mock('fs', () => ({
@@ -22,7 +22,7 @@ jest.mock('fs', () => ({
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn()
-}));
+}))
 
 beforeEach(() => {
   // Reset the mocks and environment variables
@@ -32,9 +32,9 @@ beforeEach(() => {
   process.env.INPUT_PARSER_OPTIONS = JSON.stringify({ useISODateFormat: true })
   process.env.INPUT_FETCH_OPTIONS = '{}'
   process.env.INPUT_REMOVE_PUBLISHED = 'false'
-});
+})
 
-describe('fetchRssFeed function', () => {  
+describe('fetchRssFeed function', () => {
   describe('Validation tests', () => {
     it('should set failed if feed URL is not provided', async () => {
       // Clear the environment variable for feed URL
@@ -47,7 +47,7 @@ describe('fetchRssFeed function', () => {
       expect(core.setFailed).toHaveBeenCalledWith(
         'After parsing, feedURL is not an array of non-empty strings'
       )
-    });
+    })
 
     it('should set failed if feed URL is not a valid URL', async () => {
       // Set an invalid URL for feed URL
@@ -60,7 +60,7 @@ describe('fetchRssFeed function', () => {
       expect(core.setFailed).toHaveBeenCalledWith(
         'Invalid URL provided: invalid URL'
       )
-    });
+    })
 
     it('should set failed if file path is not provided', async () => {
       // Clear the environment variable for file path
@@ -70,8 +70,10 @@ describe('fetchRssFeed function', () => {
       await fetchRssFeed()
 
       // Expect that core.setFailed was called with the expected error message
-      expect(core.setFailed).toHaveBeenCalledWith('After parsing, filePath is not an array of non-empty strings')
-    });
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'After parsing, filePath is not an array of non-empty strings'
+      )
+    })
 
     it('should set failed if file extension is not .json', async () => {
       // Set the environment variable for file path with an invalid extension
@@ -84,8 +86,8 @@ describe('fetchRssFeed function', () => {
       expect(core.setFailed).toHaveBeenCalledWith(
         'File path is invalid: File path extension must be .json'
       )
-    });
-  });
+    })
+  })
 
   describe('Input Parsing', () => {
     it('should set failed if parserOptions is invalid JSON', async () => {
@@ -201,7 +203,7 @@ describe('fetchRssFeed function', () => {
         './feed1.json',
         './feed2.json'
       ])
-      
+
       // Verify that extract function is mocked
       expect(jest.isMockFunction(extract)).toBe(true)
 
@@ -212,11 +214,11 @@ describe('fetchRssFeed function', () => {
       await fetchRssFeed()
 
       // Verify that extract was called twice with the correct arguments
-      expect(extract).toHaveBeenCalledTimes(2);
+      expect(extract).toHaveBeenCalledTimes(2)
       expect(extract).toHaveBeenCalledWith(
-          'https://example.com/feed1',
-          { useISODateFormat: true },
-          {}
+        'https://example.com/feed1',
+        { useISODateFormat: true },
+        {}
       )
       expect(extract).toHaveBeenCalledWith(
         'https://example.com/feed2',
@@ -352,7 +354,7 @@ describe('fetchRssFeed function', () => {
     it('should set failed if directory cannot be created', async () => {
       // Return javascript object from extract function
       extract.mockResolvedValueOnce({ title: 'Test Feed' })
-      
+
       // Setup
       fs.existsSync.mockReturnValue(true)
       fs.writeFileSync.mockImplementationOnce(() => {
