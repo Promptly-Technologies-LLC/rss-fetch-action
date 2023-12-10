@@ -123,12 +123,12 @@ Because of the `parser_options` we specified in this example, the output of the 
 ### `feed_url`
 
 **Required**  
-The URL of the RSS feed you want to fetch.
+The URL(s) of the RSS feed(s) you want to fetch. Can be either a string or a JSON array (of same length as `file_path`).
 
 ### `file_path`
 
 **Required**  
-The relative file path where you want to save the fetched RSS feed.
+The relative file path(s) where you want to save the fetched RSS feed(s). Can be either a string or a JSON array (of same length as `feed_url`).
 
 ### `parser_options`
 
@@ -138,7 +138,7 @@ A JSON string representing parser options. This maps directly to the parserOptio
 ### `fetch_options`
 
 **Optional**
-A JSON string representing fetch options. This maps directly to the fetchOptions parameter in the feed-extractor library's extract function. For example, to set custom headers, you can pass {"headers": {"user-agent": "Custom-Agent"}}.
+A JSON string representing fetch options. This maps directly to the fetchOptions parameter in the feed-extractor library's extract function. Note that you will need to enclose JSON in quotes and to escape interior quote marks with backslashes (e.g, `\"`). For example, to set custom headers, you can pass `"{\"headers\": {\"user-agent\": \"Custom-Agent\"}}"`.
 
 ### `remove_published`
 

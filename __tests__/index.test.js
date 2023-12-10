@@ -2,7 +2,6 @@
 import fs from 'fs'
 import path from 'path'
 import core from '@actions/core'
-import nock from 'nock'
 import { fetchRssFeed } from '../src/index'
 import { extract } from '@extractus/feed-extractor'
 
@@ -37,8 +36,6 @@ beforeEach(() => {
 
 describe('fetchRssFeed function', () => {
   describe('Validation tests', () => {
-    // Mocks Needed:
-    // 1. Environment variables for feedUrl and filePath
     it('should set failed if feed URL is not provided', async () => {
       // Clear the environment variable for feed URL
       delete process.env.INPUT_FEED_URL
@@ -48,7 +45,20 @@ describe('fetchRssFeed function', () => {
 
       // Expect that core.setFailed was called with the expected error message
       expect(core.setFailed).toHaveBeenCalledWith(
-        'Feed URL is not provided or invalid'
+        'After parsing, feedURL is not an array of non-empty strings'
+      )
+    })
+
+    it('should set failed if feed URL is not a valid URL', async () => {
+      // Set an invalid URL for feed URL
+      process.env.INPUT_FEED_URL = 'invalid URL'
+
+      // Call the function
+      await fetchRssFeed()
+
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Invalid URL provided: invalid URL'
       )
     })
 
@@ -60,7 +70,9 @@ describe('fetchRssFeed function', () => {
       await fetchRssFeed()
 
       // Expect that core.setFailed was called with the expected error message
-      expect(core.setFailed).toHaveBeenCalledWith('File path is not provided')
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'After parsing, filePath is not an array of non-empty strings'
+      )
     })
 
     it('should set failed if file extension is not .json', async () => {
@@ -72,7 +84,7 @@ describe('fetchRssFeed function', () => {
 
       // Expect that core.setFailed was called with the expected error message
       expect(core.setFailed).toHaveBeenCalledWith(
-        'File path extension must be .json'
+        'File path is invalid: File path extension must be .json'
       )
     })
   })
@@ -129,10 +141,45 @@ describe('fetchRssFeed function', () => {
     })
   })
 
+  it('should set failed if getExtraEntryFields function is invalid', async () => {
+    // Set an invalid function as a string in parserOptions
+    process.env.INPUT_PARSER_OPTIONS = JSON.stringify({
+      getExtraEntryFields: 'invalid function'
+    })
+
+    // Call the function
+    await fetchRssFeed()
+
+    // Expect that core.setFailed was called with the expected error message
+    expect(core.setFailed).toHaveBeenCalledWith(
+      "Failed to evaluate getExtraEntryFields function: Unexpected token 'function'"
+    )
+  })
+
+  it('should set failed if filePath and feedURL are different lengths', async () => {
+    // Set different lengths for filePath and feedURL
+    process.env.INPUT_FILE_PATH = JSON.stringify([
+      './feed1.json',
+      './feed2.json'
+    ])
+    process.env.INPUT_FEED_URL = JSON.stringify(['https://example.com/feed'])
+
+    // Call the function
+    await fetchRssFeed()
+
+    // Expect that core.setFailed was called with the expected error message
+    expect(core.setFailed).toHaveBeenCalledWith(
+      'After parsing, feedURL and filePath arrays do not have the same length'
+    )
+  })
+
   describe('extract function interaction', () => {
-    it('should call extract function with correct arguments', async () => {
+    it('should call extract function with correct arguments when path inputs are strings', async () => {
       // Verify that extract function is mocked
       expect(jest.isMockFunction(extract)).toBe(true)
+
+      // Mock the extract function to return a specific object
+      extract.mockResolvedValueOnce({ title: 'Test Feed' })
 
       // Call the function
       await fetchRssFeed()
@@ -141,6 +188,40 @@ describe('fetchRssFeed function', () => {
       expect(jest.isMockFunction(extract)).toBe(true)
       expect(extract).toHaveBeenCalledWith(
         'https://example.com/feed',
+        { useISODateFormat: true },
+        {}
+      )
+    })
+
+    it('should call extract function with correct arguments when path inputs are arrays', async () => {
+      // Setup
+      process.env.INPUT_FEED_URL = JSON.stringify([
+        'https://example.com/feed1',
+        'https://example.com/feed2'
+      ])
+      process.env.INPUT_FILE_PATH = JSON.stringify([
+        './feed1.json',
+        './feed2.json'
+      ])
+
+      // Verify that extract function is mocked
+      expect(jest.isMockFunction(extract)).toBe(true)
+
+      // Mock the extract function to return a specific object
+      extract.mockResolvedValue({ title: 'Test Feed' })
+
+      // Call the function
+      await fetchRssFeed()
+
+      // Verify that extract was called twice with the correct arguments
+      expect(extract).toHaveBeenCalledTimes(2)
+      expect(extract).toHaveBeenCalledWith(
+        'https://example.com/feed1',
+        { useISODateFormat: true },
+        {}
+      )
+      expect(extract).toHaveBeenCalledWith(
+        'https://example.com/feed2',
         { useISODateFormat: true },
         {}
       )
@@ -162,6 +243,22 @@ describe('fetchRssFeed function', () => {
       expect(jest.isMockFunction(extract)).toBe(true)
       expect(core.setFailed).toHaveBeenCalledWith(
         'Failed to fetch or parse feed: Some error'
+      )
+    })
+
+    it('should set failed if extract function returns something other than a javascript object', async () => {
+      // Verify that extract function is mocked
+      expect(jest.isMockFunction(extract)).toBe(true)
+
+      // Mock the extract function to return a string
+      extract.mockResolvedValueOnce('invalid')
+
+      // Call the function
+      await fetchRssFeed()
+
+      // Expect that core.setFailed was called with the expected error message
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Parsed data is invalid for feed https://example.com/feed'
       )
     })
   })
@@ -252,6 +349,25 @@ describe('fetchRssFeed function', () => {
           JSON.stringify({ title: 'Test Feed' }, null, 2)
         )
       })
+    })
+
+    it('should set failed if directory cannot be created', async () => {
+      // Return javascript object from extract function
+      extract.mockResolvedValueOnce({ title: 'Test Feed' })
+
+      // Setup
+      fs.existsSync.mockReturnValue(true)
+      fs.writeFileSync.mockImplementationOnce(() => {
+        throw new Error('Some error')
+      })
+
+      // Execute
+      await fetchRssFeed()
+
+      // Verify
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Failed to write to file: Some error'
+      )
     })
   })
 
