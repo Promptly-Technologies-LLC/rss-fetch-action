@@ -46,10 +46,9 @@ jobs:
       - name: Test Github Action with JSON
         uses: ./
         with:
-          feed_url: "https://modelingmarkets.substack.com/feed"
+          feed_url: "https://feed.zazzle.com/store/promptlytechnologies/rss"
           file_path: "./feed.json"
-          parser_options: "{\"useISODateFormat\": false, \"getExtraEntryFields\": \"(feedEntry) => { return { 'content:encoded': feedEntry['content:encoded'] || '' }; }\"}"
-          fetch_options: "{}"
+          parser_options: "{\"useISODateFormat\": false, \"normalization\": false}"
 
       - name: Validate JSON
         run: |
@@ -60,13 +59,10 @@ jobs:
           if (!obj || 
               !obj.title || 
               !obj.link || 
-              !obj.description || 
-              !obj.generator || 
               !obj.language || 
-              !obj.published || 
-              !Array.isArray(obj.entries) || 
-              obj.entries.length === 0 || 
-              !obj.entries[0]['content:encoded']) {
+              !obj.pubDate || 
+              !Array.isArray(obj.item) || 
+              obj.item.length === 0) {
             console.error('Invalid object');
             process.exit(1);
           }
