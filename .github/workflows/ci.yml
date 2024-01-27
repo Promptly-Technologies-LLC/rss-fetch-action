@@ -59,13 +59,10 @@ jobs:
           if (!obj || 
               !obj.title || 
               !obj.link || 
-              !obj.description || 
-              !obj.generator || 
               !obj.language || 
-              !obj.published || 
-              !Array.isArray(obj.entries) || 
-              obj.entries.length === 0 || 
-              !obj.entries[0]['content:encoded']) {
+              !obj.pubDate || 
+              !Array.isArray(obj.items) || 
+              obj.items.length === 0) {
             console.error('Invalid object');
             process.exit(1);
           }
