@@ -56,14 +56,24 @@ jobs:
           const fs = require('fs');
           const data = fs.readFileSync('./feed.json', 'utf8');
           const obj = JSON.parse(data);
-          if (!obj || 
-              !obj.title || 
-              !obj.link || 
-              !obj.language || 
-              !obj.pubDate || 
-              !Array.isArray(obj.item) || 
-              obj.item.length === 0) {
-            console.error('Invalid object');
+          // With normalization disabled, a single RSS <item> is an object;
+          // multiple items are an array.
+          const items = Array.isArray(obj.item)
+            ? obj.item
+            : obj.item
+              ? [obj.item]
+              : [];
+          if (!obj ||
+              !obj.title ||
+              !obj.link ||
+              !obj.language ||
+              !obj.pubDate ||
+              items.length === 0) {
+            console.error('Invalid object', {
+              keys: obj && Object.keys(obj),
+              itemType: obj && typeof obj.item,
+              itemCount: items.length
+            });
             process.exit(1);
           }
           "
