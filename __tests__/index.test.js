@@ -1,7 +1,7 @@
 // __tests__/index.test.js
 import fs from 'fs'
 import path from 'path'
-import core from '@actions/core'
+import * as core from '@actions/core'
 import { fetchRssFeed } from '../src/index'
 import { extract } from '@extractus/feed-extractor'
 
@@ -10,9 +10,13 @@ jest.mock('@extractus/feed-extractor', () => ({
 }))
 
 // Mock the core module
-jest.mock('@actions/core', () => ({
-  setFailed: jest.fn()
-}))
+jest.mock(
+  '@actions/core',
+  () => ({
+    setFailed: jest.fn()
+  }),
+  { virtual: true }
+)
 
 // Mock the fs module except for readFileSync
 jest.mock('fs', () => ({
@@ -136,7 +140,7 @@ describe('fetchRssFeed function', () => {
       expect(extract).toHaveBeenCalledWith(
         'https://example.com/feed',
         expectedParserOptions,
-        {}
+        expect.any(Function)
       )
     })
   })
@@ -189,7 +193,7 @@ describe('fetchRssFeed function', () => {
       expect(extract).toHaveBeenCalledWith(
         'https://example.com/feed',
         { useISODateFormat: true },
-        {}
+        expect.any(Function)
       )
     })
 
@@ -218,12 +222,12 @@ describe('fetchRssFeed function', () => {
       expect(extract).toHaveBeenCalledWith(
         'https://example.com/feed1',
         { useISODateFormat: true },
-        {}
+        expect.any(Function)
       )
       expect(extract).toHaveBeenCalledWith(
         'https://example.com/feed2',
         { useISODateFormat: true },
-        {}
+        expect.any(Function)
       )
     })
 
