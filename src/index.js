@@ -1,8 +1,9 @@
 const fs = require('fs')
 const path = require('path')
-const core = require('@actions/core')
 
 async function fetchRssFeed() {
+  const core = await import('@actions/core')
+
   try {
     const feedExtractor = await import('@extractus/feed-extractor')
     const extract = feedExtractor.extract
@@ -125,7 +126,9 @@ async function fetchRssFeed() {
       // Fetch and parse the feed
       let parsedData
       try {
-        parsedData = await extract(feedUrl, parserOptions, fetchOptions)
+        parsedData = await extract(feedUrl, parserOptions, url =>
+          fetch(url, fetchOptions)
+        )
       } catch (extractError) {
         throw new Error(
           `Failed to fetch or parse feed: ${extractError.message}`
